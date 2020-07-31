@@ -1,16 +1,5 @@
 import * as Discord from 'discord.js';
 
-export interface Footer {
-  iconUrl: string;
-  text: string;
-}
-
-export interface Author {
-  name: string;
-  url: string;
-  iconUrl: string;
-}
-
 // Webhook sender and embed formatter
 export class EmbedBuilder {
   currentEmbed: Discord.MessageEmbed;
@@ -18,15 +7,25 @@ export class EmbedBuilder {
   previousEmbed: Discord.MessageEmbed;
 
   defaults: {
-    author: Author;
-    footer: Footer;
+    author: Discord.MessageEmbedAuthor;
+    footer: Discord.MessageEmbedFooter;
   };
-  constructor(defaultAuthor: Author, defaultFooter: Footer) {
+
+  displayedEmbed: Discord.Message;
+
+  guildID: string;
+
+  constructor(
+    defaultAuthor: Discord.MessageEmbedAuthor,
+    defaultFooter: Discord.MessageEmbedFooter,
+    guildID: string
+  ) {
     this.currentEmbed = new Discord.MessageEmbed();
     this.defaults = {
       author: defaultAuthor,
       footer: defaultFooter
     };
+    this.guildID = guildID;
   }
 
   newEmbed(): Discord.MessageEmbed {
@@ -37,7 +36,7 @@ export class EmbedBuilder {
     } else {
       this.currentEmbed.setFooter(
         this.defaults.footer.text,
-        this.defaults.footer.iconUrl
+        this.defaults.footer.iconURL
       );
     }
 
@@ -46,7 +45,7 @@ export class EmbedBuilder {
     } else {
       this.currentEmbed.setAuthor(
         this.defaults.author.name,
-        this.defaults.author.iconUrl,
+        this.defaults.author.iconURL,
         this.defaults.author.url
       );
     }
@@ -158,5 +157,18 @@ export class EmbedBuilder {
       'https://omegaproxies.io/'
     );
     return this.currentEmbed;
+  }
+
+  addField(
+    name: string,
+    value: string,
+    inline?: boolean
+  ): Discord.MessageEmbed {
+    this.currentEmbed.addField(name, value, inline ? inline : true);
+    return this.currentEmbed;
+  }
+
+  getWebhookFormatted() {
+    return this.currentEmbed.toJSON();
   }
 }
