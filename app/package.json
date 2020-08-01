@@ -4,20 +4,20 @@
   "description": "Basic Typescript Project Setup",
   "main": "dist/index.js",
   "scripts": {
-    "start-dev": "ts-node-dev src/index.ts",
+    "start-dev": "ts-node-dev --respawn --transpile-only --ignore-watch node_modules --ignore-watch dist src/index.ts",
     "start": "tsc && node dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/woof1001/ts-boiler.git"
+    "url": "git+https://github.com/woof1001/omega-discord-bot.git"
   },
   "author": "~Woof~",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/woof1001/ts-boiler/issues"
+    "url": "https://github.com/woof1001/omega-discord-bot/issues"
   },
-  "homepage": "https://github.com/woof1001/ts-boiler#readme",
+  "homepage": "https://github.com/woof1001/omega-discord-bot#readme",
   "devDependencies": {
     "@types/node": "^14.0.27",
     "ts-node-dev": "^1.0.0-pre.56",
@@ -25,7 +25,11 @@
     "typescript": "^3.9.7"
   },
   "dependencies": {
+    "@types/lowdb": "^1.0.9",
+    "@types/uuidv4": "^5.0.0",
     "axios": "^0.19.2",
-    "discord.js": "^12.2.0"
+    "discord.js": "^12.2.0",
+    "lowdb": "^1.0.0",
+    "uuidv4": "^6.2.1"
   }
 }

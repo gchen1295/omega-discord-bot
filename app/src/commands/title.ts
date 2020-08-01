@@ -1,9 +1,10 @@
 import * as Discord from 'discord.js';
-import { EmbedBuilder } from '../../libs/embedBuilder';
+import { EmbedBuilder } from '../libs/embedBuilder';
 
 module.exports = {
   name: 'title',
   description: 'Adds title to embed',
+  adminOnly: false,
   async execute(
     msgClient: Discord.Message,
     content: string,
@@ -11,16 +12,13 @@ module.exports = {
   ) {
     const prevTitle = builderInstance.currentEmbed.title;
     try {
-      await msgClient.channel.send(builderInstance.addTitle(content));
+      builderInstance.addTitle(content);
+      await builderInstance.showEmbed(msgClient);
     } catch (err) {
       prevTitle
         ? builderInstance.addTitle(prevTitle)
         : builderInstance.removeTitle();
-      if (err.name === 'DiscordAPIError') {
-        await msgClient.channel.send(`Discord API Error: ${err.message}`);
-      } else {
-        await msgClient.channel.send(`Failed to add title!`);
-      }
+      await msgClient.channel.send(`Failed to add title!`);
     }
   }
 };

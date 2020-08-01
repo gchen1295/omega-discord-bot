@@ -1,9 +1,10 @@
 import * as Discord from 'discord.js';
-import { EmbedBuilder } from '../../libs/embedBuilder';
+import { EmbedBuilder } from '../libs/embedBuilder';
 
 module.exports = {
   name: 'url',
   description: 'Adds url to embed.',
+  adminOnly: false,
   async execute(
     msgClient: Discord.Message,
     content: string,
@@ -11,14 +12,11 @@ module.exports = {
   ) {
     const prevURL = builderInstance.currentEmbed.url;
     try {
-      await msgClient.channel.send(builderInstance.addUrl(content));
+      builderInstance.addUrl(content);
+      await builderInstance.showEmbed(msgClient);
     } catch (err) {
       prevURL ? builderInstance.addUrl(prevURL) : builderInstance.removeUrl();
-      if (err.name === 'DiscordAPIError') {
-        await msgClient.channel.send(`Discord API Error: ${err.message}`);
-      } else {
-        await msgClient.channel.send(`Failed to add URL!`);
-      }
+      await msgClient.channel.send(`Failed to add URL!`);
     }
   }
 };

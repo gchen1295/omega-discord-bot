@@ -1,5 +1,5 @@
 import * as Discord from 'discord.js';
-import { EmbedBuilder } from '../../libs/embedBuilder';
+import { EmbedBuilder } from '../libs/embedBuilder';
 
 const getBuilderFieldHelp = (defaultIconURL: string): Discord.MessageEmbed => {
   const fieldHelpEmbed = new Discord.MessageEmbed();
@@ -18,14 +18,17 @@ const getBuilderFieldHelp = (defaultIconURL: string): Discord.MessageEmbed => {
 };
 
 module.exports = {
-  name: 'preview',
-  description: 'Previews current embed.',
+  name: 'example',
+  description: 'Shows example embed with fields labelled.',
+  adminOnly: false,
   async execute(
     msgClient: Discord.Message,
     content: string,
     builderInstance: EmbedBuilder
   ) {
-    await msgClient.channel.send(
+    if (msgClient.channel.type !== 'dm')
+      await msgClient.channel.send('DMing you the example embed.');
+    await msgClient.author.send(
       getBuilderFieldHelp(builderInstance.defaults.footer.iconURL)
     );
   }

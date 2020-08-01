@@ -1,4 +1,6 @@
 import * as Discord from 'discord.js';
+import low from 'lowdb';
+import { dbSchema } from '../db-schema'
 
 // Webhook sender and embed formatter
 export class EmbedBuilder {
@@ -11,26 +13,143 @@ export class EmbedBuilder {
     footer: Discord.MessageEmbedFooter;
   };
 
-  displayedEmbed: Discord.Message;
-
   guildID: string;
+
+  adminRoleID: string;
+
+  displayedEmbed: Discord.Message | undefined;
+
+  db: low.LowdbSync<typeof dbSchema>;
 
   constructor(
     defaultAuthor: Discord.MessageEmbedAuthor,
     defaultFooter: Discord.MessageEmbedFooter,
-    guildID: string
+    dbInstance: low.LowdbSync<typeof dbSchema>,
+    guild: string,
+    adminRole: string
   ) {
     this.currentEmbed = new Discord.MessageEmbed();
     this.defaults = {
       author: defaultAuthor,
       footer: defaultFooter
     };
-    this.guildID = guildID;
+    this.db = dbInstance;
+    this.guildID = guild;
+    this.adminRoleID = adminRole;
+  }
+
+  async showEmbed(message: Discord.Message): Promise<Discord.Message> {
+
+    if (this.displayedEmbed !== void 0) {
+      try {
+        await this.displayedEmbed.edit(this.currentEmbed);
+      } catch{
+        try {
+          this.displayedEmbed = await message.channel.send(this.currentEmbed);
+        } catch (err) {
+          if (err.name === 'DiscordAPIError') {
+            await message.channel.send(`Discord API Error: ${err.message}`);
+            return;
+          } else {
+            await message.channel.send(`Failed to preview embed`);
+            return;
+          }
+        }
+      }
+    } else {
+      try {
+        this.displayedEmbed = await message.channel.send(this.currentEmbed);
+      } catch (err) {
+        if (err.name === 'DiscordAPIError') {
+          await message.channel.send(`Discord API Error: ${err.message}`);
+          return;
+        } else {
+          await message.channel.send(`Failed to preview embed`);
+          return;
+        }
+      }
+    }
+
+    return this.displayedEmbed;
+  }
+
+  addWebhook(label: string, link: string): { label: string, webhook: string }[] {
+    const currentWebhooks = this.db.get('webhooks').value();
+    const existingWebhook = currentWebhooks.find(template => template.label === label || template.webhook === link);
+    if (existingWebhook) return
+    const newSave = {
+      webhook: link,
+      label
+    };
+    currentWebhooks.push(newSave);
+    this.db.set('webhooks', currentWebhooks).write();
+    return currentWebhooks;
+  }
+
+  deleteWebhook(label: string): { label: string, webhook: string }[] {
+    const currentWebhooks = this.db.get('webhooks').value();
+    const foundIndex = currentWebhooks.findIndex(webhook => webhook.label === label);
+    if (foundIndex === -1) return
+    currentWebhooks.splice(foundIndex, 1);
+    this.db.set('webhooks', currentWebhooks);
+    return currentWebhooks;
+  }
+
+  getWebhooks(): { label: string, webhook: string }[] {
+    const currentWebhooks = this.db.get('webhooks').value();
+    if (currentWebhooks) return currentWebhooks;
+    return;
+  }
+
+  saveTemplate(label: string): { label: string, template: Discord.MessageEmbed } {
+    const currentTemplates = this.db.get('templates').value();
+    const existingTemplate = currentTemplates.find(template => template.label === label);
+    if (existingTemplate) return
+    const newSave = {
+      label,
+      template: Object.assign({}, this.currentEmbed)
+    };
+    currentTemplates.push(newSave);
+    this.db.set('templates', currentTemplates).write();
+    return newSave;
+  }
+
+  loadTemplate(label: string): Discord.MessageEmbed {
+    const currentTemplates = this.db.get('templates').value();
+    const foundIndex = currentTemplates.findIndex(template => template.label === label);
+    if (foundIndex === -1) return
+    this.previousEmbed = this.currentEmbed;
+    this.currentEmbed = new Discord.MessageEmbed(currentTemplates[foundIndex].template);
+    return this.currentEmbed;
+  }
+
+  deleteTemplate(label: string): Discord.MessageEmbed[] {
+    const currentTemplates = this.db.get('templates').value();
+    const foundIndex = currentTemplates.findIndex(template => template.label === label);
+    if (foundIndex === -1) return
+    currentTemplates.splice(foundIndex, 1);
+    this.db.set('templates', currentTemplates);
+    return currentTemplates;
+  }
+
+  getTemplates(): { label: string, template: Discord.MessageEmbed }[] {
+    return this.db.get('templates').value();
+  }
+
+  swapPrevious(): Discord.MessageEmbed {
+    if (this.previousEmbed) {
+      const tmp = this.currentEmbed;
+      this.currentEmbed = this.previousEmbed;
+      this.previousEmbed = tmp;
+      return this.currentEmbed;
+    }
+    return;
   }
 
   newEmbed(): Discord.MessageEmbed {
     this.previousEmbed = this.currentEmbed;
     this.currentEmbed = new Discord.MessageEmbed();
+    this.displayedEmbed = void 0;
     if (this.previousEmbed.footer) {
       this.currentEmbed.footer = this.previousEmbed.footer;
     } else {
@@ -162,13 +281,26 @@ export class EmbedBuilder {
   addField(
     name: string,
     value: string,
-    inline?: boolean
+    inline: boolean
   ): Discord.MessageEmbed {
-    this.currentEmbed.addField(name, value, inline ? inline : true);
+    if (this.currentEmbed.fields.length >= 25) return
+
+    this.currentEmbed.addField(name, value, inline);
     return this.currentEmbed;
   }
 
   getWebhookFormatted() {
     return this.currentEmbed.toJSON();
+  }
+
+  editWebhook(label: string, webhook: { label: string, webhook: string }): { label: string, webhook: string }[] {
+    const currentWebhooks = this.db.get('webhooks').value();
+    const existingWebhook = currentWebhooks.findIndex(template => template.label === label);
+    if (existingWebhook > -1) {
+      currentWebhooks[existingWebhook] = webhook;
+      this.db.set('webhooks', currentWebhooks).write();
+      return currentWebhooks;
+    }
+    return
   }
 }
